@@ -38,6 +38,8 @@ snowsurvey_csv <- read_csv(file.path(datadir_raw, snowsurvey_file))
 glimpse(snowsurvey_csv)
 
 ```
+- To make this into a database, it seems structured, But there is no primary key. 
+- To make a database the primary key would be a combination of; Site, Plot, Location, Date
 
 Ok, the types are not what we were expecting for the percentages of cover. Let's find out why:
 
@@ -47,9 +49,12 @@ snowsurvey_csv %>%
 ```
 
 Let's focus on the non-numeric values as a starting point:
+# Not Working !!
 
 ```{r}
 snowsurvey_csv %>%
+  count(Snow_cover) %>% 
+  filter(is.na(as.numeric(Snow_cover)))
 
 ```
 
@@ -68,7 +73,9 @@ snowsurvey_csv %>%
 Interestingly, when there is a "dot" for snow cover, it is also the case for all the other covers. Let's replace those with NA since there is no supplemental information in the provided metadata about the use of dots
 
 ```{r}
-snowsurvey_fixed <- 
+snowsurvey_fixed <- snowsurvey_csv %>% 
+  # If there is '.' replace with NA in the Snow_cover column
+  mutate(Snow_cover = ifelse(Snowcover == ".", NA, Snow_cover))
 ```
 
 #### `-` values
@@ -76,14 +83,17 @@ snowsurvey_fixed <-
 Is he problem is similar with "-"?
 
 ```{r}
-snowsurvey_csv 
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Snowcover = ifelse(Snow_cover == ".", NA, Snow_cover))
+  
 ```
 
 
 let's set it to NA:
 
 ```{r}
-snowsurvey_fixed <- 
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Snowcover = ifelse(Snow_cover == "n/a", NA, Snow_cover))
 ```
 
 #### `n/a` values
@@ -108,8 +118,8 @@ snowsurvey_fixed <-
 What about "unk"? It is probably an abbreviation for unknown:
 
 ```{r}
-snowsurvey_csv %>%
-  
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Snowcover = ifelse(Snow_cover == "unk", NA, Snow_cover))  
 ```
 
 
@@ -122,13 +132,10 @@ snowsurvey_fixed <-
 Finally What should we replace"<1" with?
 
 ```{r}
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Snowcover = ifelse(Snow_cover == "<1", "0", Snow_cover))  
 
 ```
-
-```{r}
-
-```
-
 
 ### Going numeric
 
@@ -143,7 +150,8 @@ snowsurvey_fixed %>%
 Ok, we can do the transformation:
 
 ```{r}
-snowsurvey_fixed <- 
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Snowcover = as.numeric(Snow_cover))  
 ```
 
 Yeah we have finally a numeric column 🎉. 
@@ -152,22 +160,26 @@ Yeah we have finally a numeric column 🎉.
 ### Further cleaning
 
 We are dealing with percentages, so we should verify that all the values are between 0 and 100:
+- There are two values over 100. One is -200 but total cover is 100, and the other is a 470 value, We will just make those NA for now
 
 ```{r}
- snowsurvey_fixed 
+ snowsurvey_fixed %>% 
+  filter(Snow_cover > 100)
 ```
 
 We have two values above 100, with an interesting 470%! ☃️ We should probably set those values to NAs:
 
 ```{r}
-snowsurvey_fixed <- 
+snowsurvey_fixed <- snowsurvey_fixed %>% 
+  mutate(Snowcover = ifelse(Snow_cover == ">100", NA, Snow_cover))  
 ```
 
 Let's check for negative values:
 
 ```{r}
  snowsurvey_fixed %>%
-  
+  filter(Snow_cover < 0)
+
 ```
 
 No negative value detected ✅
@@ -213,15 +225,36 @@ This data model is not convenient for a database, we will have to switch to a lo
 ### Data cleaning
 
 ```{r}
-species_long <- 
+species_long <- species_csv %>% 
+  
+  select(-c(Jdate, Num_observers, All_obs_reported, Observer_hours)) %>% 
+  
+  pivot_longer(
+    cols = !c(Year, Site, Date),
+    
+    names_to = "Species",
+    
+    values_to = "Presence",
+    
+    values_transform = list(Presence = as.character)
+  )
 ```
 
 
 We want to focus on the presence and absence of species and not the count. Let's create a new column for presence where anything else than 0 is considered present
 
 ```{r}
+glimpse(species_long)
+
+unique(species_long$Presence)
+
+
 species_presence <- species_long %>%
-  
+  mutate(Presence = ifelse(Presence == 0,
+                           #if its not true we want 1
+                           0, 1))
+unique(species_presence$Presence)
+
 ```
 
 We can remove some columns: "Num_observers", "All_obs_reported", "Observer_hours" are here to help to compute the effort of observation but since we just want presence and absence, we do not need it. We can also remove all the zeros values to reduce the size of our data set:
