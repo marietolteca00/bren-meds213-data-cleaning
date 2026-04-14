@@ -73,9 +73,11 @@ snowsurvey_csv %>%
 Interestingly, when there is a "dot" for snow cover, it is also the case for all the other covers. Let's replace those with NA since there is no supplemental information in the provided metadata about the use of dots
 
 ```{r}
-snowsurvey_fixed <- snowsurvey_csv %>% 
-  # If there is '.' replace with NA in the Snow_cover column
-  mutate(Snow_cover = ifelse(Snowcover == ".", NA, Snow_cover))
+# snowsurvey_fixed <- snowsurvey_csv %>% 
+#   # If there is '.' replace with NA in the Snow_cover column
+#   mutate(Snow_cover = ifelse(Snowcover == ".", NA, Snow_cover))
+snowsurvey_fixed <- snowsurvey_csv %>%
+  mutate(Snow_cover = ifelse(Snow_cover == ".", NA, Snow_cover))
 ```
 
 #### `-` values
@@ -101,7 +103,7 @@ snowsurvey_fixed <- snowsurvey_fixed %>%
 "n/a" seems pretty clear regarding how to fix it, but let's have a look first:
 
 ```{r}
-snowsurvey_csv %>%
+#snowsurvey_csv %>%
   
 ```
 
@@ -109,7 +111,7 @@ snowsurvey_csv %>%
 Same pattern, let's substitute with NA:
 
 ```{r}
-snowsurvey_fixed <- 
+#snowsurvey_fixed <- 
  
 ```
 
@@ -124,7 +126,7 @@ snowsurvey_fixed <- snowsurvey_fixed %>%
 
 
 ```{r}
-snowsurvey_fixed <- 
+#snowsurvey_fixed <- 
 ```
 
 #### `<1` values
