@@ -10,19 +10,28 @@ format: html
 # Libraries
 library(tidyverse)
 
+# file names
+datadir_raw <- file.path("data","raw")
+
+datadir_processed <- file.path("data", "processed/")
+
+# Read in Data
 starting_snowsurvey_csv <- read_csv(here::here("data", "processed", "snow_cover.csv"))
 
+# Quick view of data
 glimpse(starting_snowsurvey_csv)
 
 ```
-
+# View values in the Water Column
 ```{r}
 # Non numeric values
 starting_snowsurvey_csv |>
   count(Water_cover) |>
   filter(is.na(as.numeric(Water_cover)))
 ```
-
+---
+# Water Cover
+Remove non-numeric values and turn them into NA
 ```{r}
 water_fixed <- starting_snowsurvey_csv |>
   mutate(Water_cover = ifelse(Water_cover == "-", NA, Water_cover),
@@ -37,27 +46,33 @@ water_fixed|>
 class(water_fixed$Water_cover)
 ```
 
+
+Convert to Numeric
 ```{r}
 # Convert Column from Character to  Numeric
 water_fixed <- water_fixed |>
   mutate(Water_cover = as.numeric(Water_cover),
          # Make NA values for greater than 100
           Water_cover = ifelse(Water_cover > 100, NA, Water_cover))
-
+# View class 
 class(water_fixed$Water_cover)
 
+# Quick Summary Stats
 summary(water_fixed$Water_cover)
 
+# View Data
 glimpse(water_fixed)
 ```
 ---
 # Land Cover
+View non-numeric values within `land_cover` column
 ```{r}
 water_fixed |>
   count(Land_cover) |>
   filter(is.na(as.numeric(Land_cover)))
 ```
 
+# Remove Non-numeric Values from Land_cover
 ```{r}
 land_fixed <- water_fixed |>
   # Remove values that are not numeric
@@ -66,41 +81,58 @@ land_fixed <- water_fixed |>
          Land_cover = ifelse(Land_cover == "n/a", NA, Land_cover),
          Land_cover = ifelse(Land_cover == "unk", NA, Land_cover))
 
+# View NA values
 land_fixed|>
   count(Land_cover) |>
   filter(is.na(as.numeric(Land_cover)))
 
+# View unique values in column
+unique(land_fixed$Land_cover)
+
+
 
 ```
 
+# Convert Column to Numeric
 ```{r}
 land_fixed <- land_fixed %>% 
   # Switch Character to Numeric
-  mutate(Land_cover = as.numeric(Land_cover))
+  mutate(Land_cover = as.numeric(Land_cover)) %>% 
+  # Remove Negative values
+  mutate(Land_cover = ifelse(Land_cover %in% c(-100, -298), NA, Land_cover)) %>% 
+  mutate(Land_cover = ifelse(Land_cover == "NA", NA, Land_cover),
+         Land_cover = ifelse(Land_cover > 100, NA, Land_cover))
+
+
 
 # Confirm column is now numeric
 class(land_fixed$Land_cover)
+
+# View unique values in column
+unique(land_fixed$Land_cover)
 
 ```
 
 
 ---
 # Total Cover 
-
+View Non-numeric values in `Total_cover` Column
 ```{r}
-water_fixed |>
+land_fixed |>
   count(Total_cover) |>
   filter(is.na(as.numeric(Total_cover)))
 ```
 
+# Remove Non-numeric values and Get a count of NA values 
 ```{r}
-total_fixed <- water_fixed |>
+total_fixed <- land_fixed |>
   # Remove values that are not numeric
   mutate(Total_cover = ifelse(Total_cover == "-", NA, Total_cover),
          Total_cover = ifelse(Total_cover == ".", NA, Total_cover),
          Total_cover = ifelse(Total_cover == "n/a", NA, Total_cover),
          Total_cover = ifelse(Total_cover == "<row r=\\64\\ spans=\\1:11\\ x14ac:dyDescent=\\0.2\\>", NA, Total_cover))
 
+# Retrieving NA count
 total_fixed|>
   count(Total_cover) |>
   filter(is.na(as.numeric(Total_cover)))
@@ -108,14 +140,29 @@ total_fixed|>
 
 ```
 
+# Convert to Numeric, Verify Updated Class, and Check Unique Values
 ```{r}
 total_fixed <- total_fixed %>% 
   # Switch Character to Numeric
-  mutate(Total_cover = as.numeric(Total_cover))
+  mutate(Total_cover = as.numeric(Total_cover)) %>% 
+  # Remove values over 100
+  mutate(Total_cover = ifelse(Total_cover > 100, NA, Total_cover))
 
 # Confirm column is now numeric
 class(total_fixed$Total_cover)
 
+# Let's get an understanding of values in this column
+unique(total_fixed$Total_cover)
+
+```
+
+# Export Finding into CSV
+```{r}
+# check if the folder exists
+dir.create(datadir_processed, showWarnings = FALSE)
+
+# write the file
+write_csv(total_fixed, file.path(datadir_processed, "all_cover_fixed_MARIE.csv"))
 ```
 
 
