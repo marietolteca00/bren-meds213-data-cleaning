@@ -1,7 +1,14 @@
 ---
 title: "eds213_data_cleaning_assign_Marie"
 format: html
+author: "Marie Tolteca"
+date: last-modified
 ---
+# Data Access
+Dataset hosted by the NSF Arctic Data Center (https://arcticdata.io)
+# Metadata Info
+From Metadata, all data fields, a blank or "-" indicates absence of data. In some cases, this means no data were recorded; in other cases, it may be that the data were not transferred to the ASDN database by the site PI. According to the dataset metadata, Snow_cover, Water_cover, and Land_cover represent percent cover and Total_cover should always sum to 100. This informed our decision to treat values outside 0–100 as invalid and to remove rows where the three columns did not sum to 100.
+
 
 # Load in Libraries
 Adding in code chunk from class to have the same file path for data
