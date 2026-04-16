@@ -4,6 +4,7 @@ format: html
 ---
 
 # Load in Libraries
+Adding in code chunk from class to have the same file path for data
 ```{r}
 #| message: false
 
@@ -24,14 +25,14 @@ glimpse(starting_snowsurvey_csv)
 ```
 # View values in the Water Column
 ```{r}
-# Non numeric values
+# View Non-numeric values
 starting_snowsurvey_csv |>
   count(Water_cover) |>
   filter(is.na(as.numeric(Water_cover)))
 ```
 ---
 # Water Cover
-Remove non-numeric values and turn them into NA
+Assign into new dataframe. Replace `-`, `.`, `unk`, and `n/a` are non-numeric placeholders for missing data with NA
 ```{r}
 water_fixed <- starting_snowsurvey_csv |>
   mutate(Water_cover = ifelse(Water_cover == "-", NA, Water_cover),
@@ -39,15 +40,18 @@ water_fixed <- starting_snowsurvey_csv |>
          Water_cover = ifelse(Water_cover == "n/a", NA, Water_cover),
          Water_cover = ifelse(Water_cover == "unk", NA, Water_cover))
 
+# View total count of NA after removing non-numeric values
 water_fixed|>
   count(Water_cover) |>
   filter(is.na(as.numeric(Water_cover)))
 
+# View datatype
 class(water_fixed$Water_cover)
 ```
 
 
-Convert to Numeric
+# Convert `Water_cover` from character to numeric.
+Values greater than 100 are invalid for a percentage and are replaced with NA.
 ```{r}
 # Convert Column from Character to  Numeric
 water_fixed <- water_fixed |>
@@ -57,7 +61,7 @@ water_fixed <- water_fixed |>
 # View class 
 class(water_fixed$Water_cover)
 
-# Quick Summary Stats
+# Quick Summary Stats- View Max and Min Value
 summary(water_fixed$Water_cover)
 
 # View Data
@@ -65,14 +69,15 @@ glimpse(water_fixed)
 ```
 ---
 # Land Cover
-View non-numeric values within `land_cover` column
 ```{r}
+# View Non-numeric values
 water_fixed |>
   count(Land_cover) |>
   filter(is.na(as.numeric(Land_cover)))
 ```
 
 # Remove Non-numeric Values from Land_cover
+Assign into new dataframe. Replace `-`, `.`, `unk`, and `n/a` are non-numeric placeholders for missing data with NA
 ```{r}
 land_fixed <- water_fixed |>
   # Remove values that are not numeric
@@ -93,14 +98,17 @@ unique(land_fixed$Land_cover)
 
 ```
 
-# Convert Column to Numeric
+# Convert `Land_cover` from character to numeric.
+Values greater than 100 or less than 0 are invalid for a percentage and are replaced with NA.
 ```{r}
 land_fixed <- land_fixed %>% 
   # Switch Character to Numeric
   mutate(Land_cover = as.numeric(Land_cover)) %>% 
   # Remove Negative values
   mutate(Land_cover = ifelse(Land_cover %in% c(-100, -298), NA, Land_cover)) %>% 
+  # Remove NA values
   mutate(Land_cover = ifelse(Land_cover == "NA", NA, Land_cover),
+         # Remove any value over 100
          Land_cover = ifelse(Land_cover > 100, NA, Land_cover))
 
 
@@ -116,14 +124,14 @@ unique(land_fixed$Land_cover)
 
 ---
 # Total Cover 
-View Non-numeric values in `Total_cover` Column
 ```{r}
 land_fixed |>
   count(Total_cover) |>
   filter(is.na(as.numeric(Total_cover)))
 ```
 
-# Remove Non-numeric values and Get a count of NA values 
+# Remove Non-numeric values and Get a count of NA values
+Assign into new dataframe. Replace `-`, `.`, `unk`, and `n/a` are non-numeric placeholders for missing data with NA
 ```{r}
 total_fixed <- land_fixed |>
   # Remove values that are not numeric
@@ -141,12 +149,15 @@ total_fixed|>
 ```
 
 # Convert to Numeric, Verify Updated Class, and Check Unique Values
+Rows that did not add up to 100 or had NA values were removed from the dataframe. I decided to remove these rows since it would be inconsistent with the other rows and also to avoid any confusion. This is a more clear approach with a reassurance that all the values in each column of Snow, Water, and Land add up to a Total cover of 100. A total of 14 rows were removed that did not add up to a total cover of 100.
 ```{r}
 total_fixed <- total_fixed %>% 
   # Switch Character to Numeric
   mutate(Total_cover = as.numeric(Total_cover)) %>% 
-  # Remove values over 100
-  mutate(Total_cover = ifelse(Total_cover > 100, NA, Total_cover))
+  # Keep values that only have value of 100
+  mutate(Total_cover = ifelse(Total_cover != 100, NA, Total_cover),
+         Total_cover = ifelse(Snow_cover + Water_cover + Land_cover != 100, NA, Total_cover),
+         na.rm=TRUE)
 
 # Confirm column is now numeric
 class(total_fixed$Total_cover)
@@ -154,7 +165,33 @@ class(total_fixed$Total_cover)
 # Let's get an understanding of values in this column
 unique(total_fixed$Total_cover)
 
+# Let's try another attempt
+total_fixed2<- land_fixed %>%
+  # Switch Character to Numeric
+  mutate(Total_cover = as.numeric(Total_cover)) %>%
+  # Replace any non-100 total with NA
+  mutate(Total_cover = ifelse(Total_cover != 100, NA, Total_cover)) %>%
+  # If Total_cover is missing but all three cover columns are known, compute it as their sum
+  mutate(Total_cover = ifelse(
+    is.na(Total_cover) & !is.na(Snow_cover) & !is.na(Water_cover) & !is.na(Land_cover),
+    Snow_cover + Water_cover + Land_cover,
+    Total_cover)) %>%
+  # Only keep Total_cover if it equals 100
+  mutate(Total_cover = ifelse(Total_cover == 100, 100, NA)) %>% 
+  # Remove rows that do not add up to 100 
+  filter(Snow_cover + Water_cover + Land_cover == 100)
+
 ```
+
+# Do all column covers add up to 100 in Total Cover?
+```{r}
+# Check for any NA values in the four cover columns
+sum(is.na(total_fixed2[, c("Snow_cover", "Water_cover", "Land_cover", "Total_cover")]))
+
+# Check all rows sum to 100
+print(paste("All rows sum to 100:", all(total_fixed2$Snow_cover + total_fixed2$Water_cover + total_fixed2$Land_cover == 100)))
+```
+
 
 # Export Finding into CSV
 ```{r}
@@ -162,7 +199,7 @@ unique(total_fixed$Total_cover)
 dir.create(datadir_processed, showWarnings = FALSE)
 
 # write the file
-write_csv(total_fixed, file.path(datadir_processed, "all_cover_fixed_MARIE.csv"))
+write_csv(total_fixed2, file.path(datadir_processed, "all_cover_fixed_MARIE.csv"))
 ```
 
 

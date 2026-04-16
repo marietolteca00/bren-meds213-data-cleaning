@@ -65,9 +65,9 @@ Ok, we found our problematic values that are not numeric. There are a non-neglig
 #### `.` values
 
 ```{r}
-snowsurvey_csv %>%
-  filter(Snow_cover == ".") %>%
-  View()
+# snowsurvey_csv %>%
+#   filter(Snow_cover == ".") %>%
+#   View()
 ```
 
 Interestingly, when there is a "dot" for snow cover, it is also the case for all the other covers. Let's replace those with NA since there is no supplemental information in the provided metadata about the use of dots
@@ -78,6 +78,7 @@ Interestingly, when there is a "dot" for snow cover, it is also the case for all
 #   mutate(Snow_cover = ifelse(Snowcover == ".", NA, Snow_cover))
 snowsurvey_fixed <- snowsurvey_csv %>%
   mutate(Snow_cover = ifelse(Snow_cover == ".", NA, Snow_cover))
+view(snowsurvey_fixed)
 ```
 
 #### `-` values
@@ -262,7 +263,7 @@ unique(species_presence$Presence)
 We can remove some columns: "Num_observers", "All_obs_reported", "Observer_hours" are here to help to compute the effort of observation but since we just want presence and absence, we do not need it. We can also remove all the zeros values to reduce the size of our data set:
 
 ```{r}
-species_presence <- species_presence %>%
+#species_presence <- species_presence %>%
   
 
 ```
