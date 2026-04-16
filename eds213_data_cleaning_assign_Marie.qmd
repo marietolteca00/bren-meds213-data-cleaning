@@ -16,12 +16,11 @@ datadir_raw <- file.path("data","raw")
 
 datadir_processed <- file.path("data", "processed/")
 
-# Read in Data
+# Read in Data- using here::here()
 starting_snowsurvey_csv <- read_csv(here::here("data", "processed", "snow_cover.csv"))
 
 # Quick view of data
 glimpse(starting_snowsurvey_csv)
-
 ```
 # View values in the Water Column
 ```{r}
@@ -67,6 +66,7 @@ summary(water_fixed$Water_cover)
 # View Data
 glimpse(water_fixed)
 ```
+
 ---
 # Land Cover
 ```{r}
@@ -99,18 +99,17 @@ unique(land_fixed$Land_cover)
 ```
 
 # Convert `Land_cover` from character to numeric.
-Values greater than 100 or less than 0 are invalid for a percentage and are replaced with NA.
+Values greater than 100 or less than zero are invalid for a percentage and are replaced with NA.
 ```{r}
 land_fixed <- land_fixed %>% 
   # Switch Character to Numeric
   mutate(Land_cover = as.numeric(Land_cover)) %>% 
   # Remove Negative values
-  mutate(Land_cover = ifelse(Land_cover %in% c(-100, -298), NA, Land_cover)) %>% 
+  mutate(Land_cover = ifelse(Land_cover < 0, NA, Land_cover),
   # Remove NA values
-  mutate(Land_cover = ifelse(Land_cover == "NA", NA, Land_cover),
-         # Remove any value over 100
-         Land_cover = ifelse(Land_cover > 100, NA, Land_cover))
-
+  Land_cover = ifelse(Land_cover == "NA", NA, Land_cover),
+  # Remove any value over 100
+  Land_cover = ifelse(Land_cover > 100, NA, Land_cover))
 
 
 # Confirm column is now numeric
@@ -130,8 +129,8 @@ land_fixed |>
   filter(is.na(as.numeric(Total_cover)))
 ```
 
-# Remove Non-numeric values and Get a count of NA values
-Assign into new dataframe. Replace `-`, `.`, `unk`, and `n/a` are non-numeric placeholders for missing data with NA
+# Convert `Total_cover` from character to numeric.
+Assign into new dataframe. Replace `-`, `.`, `n/a`, and long string are non-numeric placeholders for missing data with NA
 ```{r}
 total_fixed <- land_fixed |>
   # Remove values that are not numeric
@@ -149,24 +148,10 @@ total_fixed|>
 ```
 
 # Convert to Numeric, Verify Updated Class, and Check Unique Values
-Rows that did not add up to 100 or had NA values were removed from the dataframe. I decided to remove these rows since it would be inconsistent with the other rows and also to avoid any confusion. This is a more clear approach with a reassurance that all the values in each column of Snow, Water, and Land add up to a Total cover of 100. A total of 14 rows were removed that did not add up to a total cover of 100.
+Rows that did not add up to 100 or had NA values were removed from the dataframe. I decided to remove these rows since it would be inconsistent with the other rows and also to avoid any confusion. This is a more clear approach with a reassurance that all the values in each column of Snow, Water, and Land add up to a Total cover of 100. A total of 14 rows were removed where snow, water, and land cover did not sum to 100. Two patterns were found; rows where all three values were 0, but total_cover was 100, and rows where the three columns summed to 90.
 ```{r}
-total_fixed <- total_fixed %>% 
-  # Switch Character to Numeric
-  mutate(Total_cover = as.numeric(Total_cover)) %>% 
-  # Keep values that only have value of 100
-  mutate(Total_cover = ifelse(Total_cover != 100, NA, Total_cover),
-         Total_cover = ifelse(Snow_cover + Water_cover + Land_cover != 100, NA, Total_cover),
-         na.rm=TRUE)
-
-# Confirm column is now numeric
-class(total_fixed$Total_cover)
-
-# Let's get an understanding of values in this column
-unique(total_fixed$Total_cover)
-
 # Let's try another attempt
-total_fixed2<- land_fixed %>%
+total_fixed2<- total_fixed %>%
   # Switch Character to Numeric
   mutate(Total_cover = as.numeric(Total_cover)) %>%
   # Replace any non-100 total with NA
@@ -180,6 +165,9 @@ total_fixed2<- land_fixed %>%
   mutate(Total_cover = ifelse(Total_cover == 100, 100, NA)) %>% 
   # Remove rows that do not add up to 100 
   filter(Snow_cover + Water_cover + Land_cover == 100)
+
+# Verify column is now numeric
+class(total_fixed2$Total_cover)
 
 ```
 
